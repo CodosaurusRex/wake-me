@@ -1,5 +1,5 @@
 package fft;
-
+import java.util.Arrays;
 /******************************************************************************
  *  Compilation:  javac FFT.java
  *  Execution:    java FFT N
@@ -117,7 +117,7 @@ public class FFT {
     public static void main(String[] args) { 
         int N = 32;
         Complex[] x = new Complex[N];
-        Complex[][] z = new Complex[N][];
+         double z[] = new double[N] ;
      
         // original data
         for (int i = 0; i < N; i++) {
@@ -130,9 +130,11 @@ public class FFT {
         Complex[] y = fft(x);
         show(y, "y = fft(x)");
         
-        for (int i = 0; i < y.size(); i++) {
-            z[i] = [y[i].abs(),y[i].phase()]
+        for (int i = 0; i < N; i++) {
+            z[i] = y[i].abs();
 	}
+        System.out.println(Arrays.toString(z));
+        
     }
 
 }
