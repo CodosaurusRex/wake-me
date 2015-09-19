@@ -66,13 +66,21 @@ public class FFT {
         }
         System.out.println();
     }
-    public static double[] power(Complex[] y){
-        double z[] = new double[64] ;
-        for (int i = 0; i < 64; i++) {
+    public static double[] power(Complex[] y, int N){
+        double z[] = new double[N] ;
+        for (int i = 0; i < N; i++) {
             z[i] = y[i].abs();
 	}
         return z;
-    }    
+    } 
+    /*public static double[] wakeme(double[] z){
+        double delta = 0;
+        double alpha = 0;
+        double 
+        for (int i = 0; i < 64; i++) {
+            z[i] = y[i].abs();
+	}
+    }*/
    /***************************************************************************
     *  Test client and sample execution
     *
@@ -120,22 +128,25 @@ public class FFT {
     ***************************************************************************/
 
     public static void main(String[] args) { 
-        int N = 64;
+        int N = 8;
         Complex[] x = new Complex[N];
         double z[] = new double[N] ;
-     
+        
         // original data
         for (int i = 0; i < N; i++) {
-            x[i] = new Complex(i, 0);
-            x[i] = new Complex(-2*Math.random() + 1, 0);
+            x[i] = new Complex(0,0);
+            //x[i] = new Complex(i,Math.cos(Math.PI/2*i));
+            //x[i] = new Complex(i, 0);
+            //x[i] = new Complex(-2*Math.random() + 1, 0);
         }
+        x[1] = new Complex (1,0);
         show(x, "x");
 
         // FFT of original data
         Complex[] y = fft(x);
         show(y, "y = fft(x)");
         
-        z = power(y);
+        z = power(y, N);
         System.out.println(Arrays.toString(z));
         
     }
