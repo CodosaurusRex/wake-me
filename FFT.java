@@ -73,14 +73,36 @@ public class FFT {
 	}
         return z;
     } 
-    /*public static double[] wakeme(double[] z){
+    public static double[] wakeme(double[] z){
+        int dt = 10;
         double delta = 0;
+        double theta = 0;
         double alpha = 0;
-        double 
-        for (int i = 0; i < 64; i++) {
-            z[i] = y[i].abs();
+        double betal = 0;
+        double betau = 0;
+        for (int i = 0; i < 4*dt; i++) {
+            delta += z[i];
+        }
+        for (int i = 4*dt; i < 8*dt; i++) {
+            theta += z[i];
+        }
+        for (int i = 8*dt; i < 12*dt; i++) {
+            alpha += z[i];
 	}
-    }*/
+        for (int i = 13*dt; i < 20*dt; i++) {
+            betal += z[i];
+	}
+        for (int i = 13*dt; i < 20*dt; i++) {
+            betau += z[i];
+	}
+        double waves[] = new double[5];
+        waves[0] = delta;
+        waves[1] = theta;
+        waves[2] = alpha;
+        waves[3] = betal;
+        waves[4] = betau;
+        return waves;
+    }
    /***************************************************************************
     *  Test client and sample execution
     *
