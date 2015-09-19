@@ -117,6 +117,7 @@ public class FFT {
     public static void main(String[] args) { 
         int N = 32;
         Complex[] x = new Complex[N];
+        Complex[][] z = new Complex[N][];
      
         // original data
         for (int i = 0; i < N; i++) {
