@@ -66,8 +66,13 @@ public class FFT {
         }
         System.out.println();
     }
-
-
+    public static double[] power(Complex[] y){
+        double z[] = new double[64] ;
+        for (int i = 0; i < 64; i++) {
+            z[i] = y[i].abs();
+	}
+        return z;
+    }    
    /***************************************************************************
     *  Test client and sample execution
     *
@@ -115,9 +120,9 @@ public class FFT {
     ***************************************************************************/
 
     public static void main(String[] args) { 
-        int N = 32;
+        int N = 64;
         Complex[] x = new Complex[N];
-         double z[] = new double[N] ;
+        double z[] = new double[N] ;
      
         // original data
         for (int i = 0; i < N; i++) {
@@ -130,9 +135,7 @@ public class FFT {
         Complex[] y = fft(x);
         show(y, "y = fft(x)");
         
-        for (int i = 0; i < N; i++) {
-            z[i] = y[i].abs();
-	}
+        z = power(y);
         System.out.println(Arrays.toString(z));
         
     }
