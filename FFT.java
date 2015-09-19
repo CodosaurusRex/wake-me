@@ -1,220 +1,209 @@
-
- Copyright 2006-2007 Columbia University.
+/******************************************************************************
+ *  Compilation:  javac FFT.java
+ *  Execution:    java FFT N
+ *  Dependencies: Complex.java
  *
- * This file is part of MEAPsoft.
+ *  Compute the FFT and inverse FFT of a length N complex sequence.
+ *  Bare bones implementation that runs in O(N log N) time. Our goal
+ *  is to optimize the clarity of the code, rather than performance.
  *
- * MEAPsoft is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ *  Limitations
+ *  -----------
+ *   -  assumes N is a power of 2
  *
- * MEAPsoft is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with MEAPsoft; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
- * 02110-1301 USA
- *
- * See the file "COPYING" for the text of the license.
- */
+ *   -  not the most memory efficient algorithm (because it uses
+ *      an object type for representing complex numbers and because
+ *      it re-allocates memory for the subarray, instead of doing
+ *      in-place or reusing a single temporary array)
+ *  
+ ******************************************************************************/
 
- package com.meapsoft;
+public class FFT {
 
+    // compute the FFT of x[], assuming its length is a power of 2
+    public static Complex[] fft(Complex[] x) {
+        int N = x.length;
 
- public class FFT {
+        // base case
+        if (N == 1) return new Complex[] { x[0] };
 
- int n, m;
+        // radix 2 Cooley-Tukey FFT
+        if (N % 2 != 0) { throw new RuntimeException("N is not a power of 2"); }
 
- // Lookup tables. Only need to recompute when size of FFT changes.
- double[] cos;
- double[] sin;
+        // fft of even terms
+        Complex[] even = new Complex[N/2];
+        for (int k = 0; k < N/2; k++) {
+            even[k] = x[2*k];
+        }
+        Complex[] q = fft(even);
 
- double[] window;
+        // fft of odd terms
+        Complex[] odd  = even;  // reuse the array
+        for (int k = 0; k < N/2; k++) {
+            odd[k] = x[2*k + 1];
+        }
+        Complex[] r = fft(odd);
 
- public FFT(int n) {
- this.n = n;
- this.m = (int)(Math.log(n) / Math.log(2));
-
- // Make sure n is a power of 2
- if(n != (1<<m))
- throw new RuntimeException("FFT length must be power of 2");
-
- // precompute tables
- cos = new double[n/2];
- sin = new double[n/2];
-
- // for(int i=0; i<n/4; i++) {
- // cos[i] = Math.cos(-2*Math.PI*i/n);
- // sin[n/4-i] = cos[i];
- // cos[n/2-i] = -cos[i];
- // sin[n/4+i] = cos[i];
- // cos[n/2+i] = -cos[i];
- // sin[n*3/4-i] = -cos[i];
- // cos[n-i] = cos[i];
- // sin[n*3/4+i] = -cos[i];
- // }
-
- for(int i=0; i<n/2; i++) {
- cos[i] = Math.cos(-2*Math.PI*i/n);
- sin[i] = Math.sin(-2*Math.PI*i/n);
- }
-
- makeWindow();
- }
-
- protected void makeWindow() {
- // Make a blackman window:
- // w(n)=0.42-0.5cos{(2*PI*n)/(N-1)}+0.08cos{(4*PI*n)/(N-1)};
- window = new double[n];
- for(int i = 0; i < window.length; i++)
- window[i] = 0.42 - 0.5 * Math.cos(2*Math.PI*i/(n-1))
- + 0.08 * Math.cos(4*Math.PI*i/(n-1));
- }
-
- public double[] getWindow() {
- return window;
- }
+        // combine
+        Complex[] y = new Complex[N];
+        for (int k = 0; k < N/2; k++) {
+            double kth = -2 * k * Math.PI / N;
+            Complex wk = new Complex(Math.cos(kth), Math.sin(kth));
+            y[k]       = q[k].plus(wk.times(r[k]));
+            y[k + N/2] = q[k].minus(wk.times(r[k]));
+        }
+        return y;
+    }
 
 
- /***************************************************************
- * fft.c
- * Douglas L. Jones
- * University of Illinois at Urbana-Champaign
- * January 19, 1992
- * http://cnx.rice.edu/content/m12016/latest/
- *
- * fft: in-place radix-2 DIT DFT of a complex input
- *
- * input:
- * n: length of FFT: must be a power of two
- * m: n = 2**m
- * input/output
- * x: double array of length n with real part of data
- * y: double array of length n with imag part of data
- *
- * Permission to copy and use this program is granted
- * as long as this header is included.
- ****************************************************************/
- public void fft(double[] x, double[] y)
- {
- int i,j,k,n1,n2,a;
- double c,s,e,t1,t2;
+    // compute the inverse FFT of x[], assuming its length is a power of 2
+    public static Complex[] ifft(Complex[] x) {
+        int N = x.length;
+        Complex[] y = new Complex[N];
+
+        // take conjugate
+        for (int i = 0; i < N; i++) {
+            y[i] = x[i].conjugate();
+        }
+
+        // compute forward FFT
+        y = fft(y);
+
+        // take conjugate again
+        for (int i = 0; i < N; i++) {
+            y[i] = y[i].conjugate();
+        }
+
+        // divide by N
+        for (int i = 0; i < N; i++) {
+            y[i] = y[i].times(1.0 / N);
+        }
+
+        return y;
+
+    }
+
+    // compute the circular convolution of x and y
+    public static Complex[] cconvolve(Complex[] x, Complex[] y) {
+
+        // should probably pad x and y with 0s so that they have same length
+        // and are powers of 2
+        if (x.length != y.length) { throw new RuntimeException("Dimensions don't agree"); }
+
+        int N = x.length;
+
+        // compute FFT of each sequence
+        Complex[] a = fft(x);
+        Complex[] b = fft(y);
+
+        // point-wise multiply
+        Complex[] c = new Complex[N];
+        for (int i = 0; i < N; i++) {
+            c[i] = a[i].times(b[i]);
+        }
+
+        // compute inverse FFT
+        return ifft(c);
+    }
 
 
- // Bit-reverse
- j = 0;
- n2 = n/2;
- for (i=1; i < n - 1; i++) {
- n1 = n2;
- while ( j >= n1 ) {
- j = j - n1;
- n1 = n1/2;
- }
- j = j + n1;
+    // compute the linear convolution of x and y
+    public static Complex[] convolve(Complex[] x, Complex[] y) {
+        Complex ZERO = new Complex(0, 0);
 
- if (i < j) {
- t1 = x[i];
- x[i] = x[j];
- x[j] = t1;
- t1 = y[i];
- y[i] = y[j];
- y[j] = t1;
- }
- }
+        Complex[] a = new Complex[2*x.length];
+        for (int i = 0;        i <   x.length; i++) a[i] = x[i];
+        for (int i = x.length; i < 2*x.length; i++) a[i] = ZERO;
 
- // FFT
- n1 = 0;
- n2 = 1;
+        Complex[] b = new Complex[2*y.length];
+        for (int i = 0;        i <   y.length; i++) b[i] = y[i];
+        for (int i = y.length; i < 2*y.length; i++) b[i] = ZERO;
 
- for (i=0; i < m; i++) {
- n1 = n2;
- n2 = n2 + n2;
- a = 0;
+        return cconvolve(a, b);
+    }
 
- for (j=0; j < n1; j++) {
- c = cos[a];
- s = sin[a];
- a += 1 << (m-i-1);
-
- for (k=j; k < n; k=k+n2) {
- t1 = c*x[k+n1] - s*y[k+n1];
- t2 = s*x[k+n1] + c*y[k+n1];
- x[k+n1] = x[k] - t1;
- y[k+n1] = y[k] - t2;
- x[k] = x[k] + t1;
- y[k] = y[k] + t2;
- }
- }
- }
- }
+    // display an array of Complex numbers to standard output
+    public static void show(Complex[] x, String title) {
+        System.out.println(title);
+        System.out.println("-------------------");
+        for (int i = 0; i < x.length; i++) {
+            System.out.println(x[i]);
+        }
+        System.out.println();
+    }
 
 
+   /***************************************************************************
+    *  Test client and sample execution
+    *
+    *  % java FFT 4
+    *  x
+    *  -------------------
+    *  -0.03480425839330703
+    *  0.07910192950176387
+    *  0.7233322451735928
+    *  0.1659819820667019
+    *
+    *  y = fft(x)
+    *  -------------------
+    *  0.9336118983487516
+    *  -0.7581365035668999 + 0.08688005256493803i
+    *  0.44344407521182005
+    *  -0.7581365035668999 - 0.08688005256493803i
+    *
+    *  z = ifft(y)
+    *  -------------------
+    *  -0.03480425839330703
+    *  0.07910192950176387 + 2.6599344570851287E-18i
+    *  0.7233322451735928
+    *  0.1659819820667019 - 2.6599344570851287E-18i
+    *
+    *  c = cconvolve(x, x)
+    *  -------------------
+    *  0.5506798633981853
+    *  0.23461407150576394 - 4.033186818023279E-18i
+    *  -0.016542951108772352
+    *  0.10288019294318276 + 4.033186818023279E-18i
+    *
+    *  d = convolve(x, x)
+    *  -------------------
+    *  0.001211336402308083 - 3.122502256758253E-17i
+    *  -0.005506167987577068 - 5.058885073636224E-17i
+    *  -0.044092969479563274 + 2.1934338938072244E-18i
+    *  0.10288019294318276 - 3.6147323062478115E-17i
+    *  0.5494685269958772 + 3.122502256758253E-17i
+    *  0.240120239493341 + 4.655566391833896E-17i
+    *  0.02755001837079092 - 2.1934338938072244E-18i
+    *  4.01805098805014E-17i
+    *
+    ***************************************************************************/
 
+    public static void main(String[] args) { 
+        int N = Integer.parseInt(args[0]);
+        Complex[] x = new Complex[N];
 
- // Test the FFT to make sure it's working
- public static void main(String[] args) {
- int N = 8;
+        // original data
+        for (int i = 0; i < N; i++) {
+            x[i] = new Complex(i, 0);
+            x[i] = new Complex(-2*Math.random() + 1, 0);
+        }
+        show(x, "x");
 
- FFT fft = new FFT(N);
+        // FFT of original data
+        Complex[] y = fft(x);
+        show(y, "y = fft(x)");
 
- double[] window = fft.getWindow();
- double[] re = new double[N];
- double[] im = new double[N];
+        // take inverse FFT
+        Complex[] z = ifft(y);
+        show(z, "z = ifft(y)");
 
- // Impulse
- re[0] = 1; im[0] = 0;
- for(int i=1; i<N; i++)
- re[i] = im[i] = 0;
- beforeAfter(fft, re, im);
+        // circular convolution of x with itself
+        Complex[] c = cconvolve(x, x);
+        show(c, "c = cconvolve(x, x)");
 
- // Nyquist
- for(int i=0; i<N; i++) {
- re[i] = Math.pow(-1, i);
- im[i] = 0;
- }
- beforeAfter(fft, re, im);
+        // linear convolution of x with itself
+        Complex[] d = convolve(x, x);
+        show(d, "d = convolve(x, x)");
+    }
 
- // Single sin
- for(int i=0; i<N; i++) {
- re[i] = Math.cos(2*Math.PI*i / N);
- im[i] = 0;
- }
- beforeAfter(fft, re, im);
-
- // Ramp
- for(int i=0; i<N; i++) {
- re[i] = i;
- im[i] = 0;
- }
- beforeAfter(fft, re, im);
-
- long time = System.currentTimeMillis();
- double iter = 30000;
- for(int i=0; i<iter; i++)
- fft.fft(re,im);
- time = System.currentTimeMillis() - time;
- System.out.println("Averaged " + (time/iter) + "ms per iteration");
- }
-
- protected static void beforeAfter(FFT fft, double[] re, double[] im) {
- System.out.println("Before: ");
- printReIm(re, im);
- fft.fft(re, im);
- System.out.println("After: ");
- printReIm(re, im);
- }
-
- protected static void printReIm(double[] re, double[] im) {
- System.out.print("Re: [");
- for(int i=0; i<re.length; i++)
- System.out.print(((int)(re[i]*1000)/1000.0) + " ");
-
- System.out.print("]\nIm: [");
- for(int i=0; i<im.length; i++)
- System.out.print(((int)(im[i]*1000)/1000.0) + " ");
-
- System.out.println("]");
- }
- }
+}
